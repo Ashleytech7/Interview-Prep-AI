@@ -1,17 +1,21 @@
-import React, {useState} from 'react'
+import React, {useContext, useState} from 'react'
 import { useNavigate } from 'react-router-dom';
 import Input from '../../components/Inputs/input';
 import { validateEmail } from '../../utils/helper';
+import axiosInstance from '../../utils/axiosInstance';
+import { API_PATHS } from '../../utils/apiPaths';
+import { UserContext } from '../../context/userContext';
 
 const Login = ({setCurrentPage}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
 
+  const {updateUser} = useContext(UserContext);
   const navigate = useNavigate();
 
   //Handle login form submission
-  const handleSubmit = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     // Add login logic here
     if (!validateEmail(email)){
@@ -28,8 +32,19 @@ const Login = ({setCurrentPage}) => {
 
     //Login API call
     try{
-      
-    }catch(error){
+      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
+        email,
+        password,
+      });
+
+      const { token } = response.data;
+
+      if (token) {
+        localStorage.setItem("token", token);
+        updateUser(response.data);
+        navigate("/dashboard");
+      }
+    } catch(error){
       if(error.response && error.response.data.message){
         setError(error.response.data.message);
       } else {
@@ -44,7 +59,7 @@ const Login = ({setCurrentPage}) => {
       Please enter your details to login 
     </p>
 
-    <form onSubmit={handleSubmit} >
+    <form onSubmit={handleLogin} >
       <Input 
         value={email}
         onChange={({target}) => setEmail(target.value)}

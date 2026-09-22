@@ -1,17 +1,22 @@
-import React, {useState} from 'react'
+import React, {useState, useContext} from 'react';
 import { useNavigate } from 'react-router-dom';
 import Input from '../../components/Inputs/input';
 import ProfilePhotoSelector from '../../components/Inputs/ProfilePhotoSelector';
 import { validateEmail } from '../../utils/helper';
+import { UserContext } from '../../context/userContext';
+import { API_PATHS } from '../../utils/apiPaths';
+import axiosInstance from '../../utils/axiosInstance';
+import uploadImage from '../../utils/uploadImage';
 
 const Signup = ({setCurrentPage}) => {
-  const [profilepic, setProfilepic] = useState(null);
+  const [profilePic, setProfilepic] = useState(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [error, setError] = useState(null);
 
+  const {updateUser} = useContext(UserContext);
   const navigate = useNavigate();
 
   // Handle signup form submit
@@ -40,8 +45,27 @@ const Signup = ({setCurrentPage}) => {
     //Signup API Call
 
     try{
-      
-    }catch(error){
+      // Upload image if present
+      if (profilePic) {
+        const imgUploadRes = await uploadImage(profilePic);
+        profileImageUrl = imgUploadRes.imageUrl || "";
+      }
+
+      const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
+        name: fullName,
+        email,
+        password,
+        profileImageUrl,
+      });
+
+      const { token } = response.data;
+
+      if(token) {
+        localStorage.setItem("token", token);
+        updateUser(response.data);
+        navigate("/dashboard");
+      }
+    } catch(error){
       if(error.response && error.response.data.message){
         setError(error.response.data.message);
       } else {
@@ -59,7 +83,7 @@ const Signup = ({setCurrentPage}) => {
 
     <form onSubmit={handleSignup}>
 
-      <ProfilePhotoSelector image={profilepic} setImage={setProfilepic} />
+      <ProfilePhotoSelector image={profilePic} setImage={setProfilepic} />
 
       <div className="grid grid-cols-1 md:grid-cols-1 gap-2">
         <Input
